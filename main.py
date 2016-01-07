@@ -11,11 +11,6 @@ class Game:
 
 	"""
     def __init__(self):
-        # self.player = Entity("Slats McHorse", CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, "@",
-        #                      libtcod.red, actor=Actor(25, 12))
-        #
-        # self.world = World("Slatsnrealm")
-        # self.renderer = Renderer()
 
         #######################################################################
         # initialize console
@@ -253,11 +248,11 @@ game = Game()   # Initialize the Game
 #########################################################
 # Player creation
 
-player = Entity("Slats McHorse", CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, "@",
+player = Entity("Dude McSnore", CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, "@",
                 libtcod.red, actor=Actor(25, 12))
 #########################################################
 
-world = World("Slatsnrealm")    # Initialize the World named Slatsnrealm
+world = World("Testrealm")    # Initialize the World named Slatsnrealm
 world.generate("plain")         # Generate the map using a map_type string
 
 renderer = Renderer()           # Initialize the renderer
