@@ -1,6 +1,8 @@
 # global constants and variables
 import libtcodpy as libtcod
 
+FPS_LIMIT = 20
+
 # font options
 FONT1 = "fonts/qbicfeet_10x10.png"
 FONT2 = "fonts/Alloy_curses_12x12.png"
@@ -15,7 +17,7 @@ SCREEN_WIDTH = CAMERA_WIDTH + 2
 SCREEN_HEIGHT = CAMERA_HEIGHT + 4
 
 # initialize game consoles
-CON_GAME = libtcod.console_new(CAMERA_WIDTH, CAMERA_HEIGHT)	# con for displaying the map only
+CON_GAME = libtcod.console_new(CAMERA_WIDTH, CAMERA_HEIGHT)	        # con for displaying the map only
 CON_GUI = libtcod.console_new(CAMERA_WIDTH, 1)						# con for the one-liner GUI
 
 #########################################################
@@ -36,6 +38,43 @@ color_dark_ground = libtcod.Color(35, 35, 35)
 color_light_ground = libtcod.Color(150, 150, 150)
 
 color_ui_frames = libtcod.Color(220,220,220)
+
+#########################################################
+# ASCII characters
+#########################################################
+
+MOVE_DIRECTIONS = {
+    "up"        :   (0, -1),
+    "up-right"  :   (1, -1),
+    "right"     :   (1, 0),
+    "down-right":   (1, 1),
+    "down"      :   (0, 1),
+    "down-left" :   (-1, 1),
+    "left"      :   (-1, 0),
+    "up-left"   :   (-1, -1)
+}
+
+MOVE_KEYS = {
+    libtcod.KEY_KP8     :   "up",
+    libtcod.KEY_UP      :   "up",
+
+    libtcod.KEY_KP9     :   "up-right",
+
+    libtcod.KEY_KP6     :   "right",
+    libtcod.KEY_RIGHT   :   "right",
+
+    libtcod.KEY_KP3     :   "down-right",
+
+    libtcod.KEY_KP2     :   "down",
+    libtcod.KEY_DOWN    :   "down",
+
+    libtcod.KEY_KP1     :   "down-left",
+
+    libtcod.KEY_KP4     :   "left",
+    libtcod.KEY_LEFT    :   "left",
+
+    libtcod.KEY_KP7     :   "up-left"
+}
 
 #########################################################
 # ASCII characters

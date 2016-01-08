@@ -1,5 +1,6 @@
 from data.constants import *
-
+import numpy as np
+import random
 
 #########################################################
 # Classes
@@ -66,7 +67,7 @@ class Entity:
 
     # Replaces Entity at x,y with "."
     def clear(self):
-        libtcod.console_put_char_ex(CON_GAME, self.x, self.y, ".", libtcod.white, libtcod.black)
+        libtcod.console_put_char_ex(CON_GAME, self.x, self.y, world.map[self.y, self.x].symbol, libtcod.white, libtcod.black)
 
 
 class Actor:
@@ -77,15 +78,20 @@ class Actor:
         self.mana_max = mana
 
     def move(self, dx, dy):
-        self.owner.x += dx
-        self.owner.y += dy
+        # Move if Tile is walkable
+        if world.map[self.owner.y + dy, self.owner.x + dx].walkable is True:
+            self.owner.x += dx
+            self.owner.y += dy
+        else:
+            pass
 
 
 class Tile:
     """
-
+    The general Tile class, carrying the x,y coordinates of the respective tile, it's symbol, name,
+    in-fov- and out-of-fov-color, explored bool, walkable bool and transparent bool.
 	"""
-    def __init__(self, x, y):
+    def __init__(self, y, x):
         self.x = x
         self.y = y
 
@@ -93,7 +99,9 @@ class Tile:
         self.rel_y = None
 
         self.symbol = "."
-        self.name = "Air"
+        self.name = None
+        self.color = color_light_ground
+        self.color_dark = color_dark_ground
 
         self.explored = False  # all tiles start unexplored
         self.walkable = True
@@ -113,26 +121,87 @@ class World:
 
         self.entities = [player]  # list of entities in world
 
-        self.map = []
+        # Create 2d numpy-array with objects as data type: map[y][x]
+        self.map = np.ndarray((self.height, self.width), dtype=np.object)
         self.fov_map = []
+        self.fov_map_np = np.ndarray((self.height, self.width), dtype=np.object)
+
+    def generate_borders(self):
+        for y in range(self.height):
+            self.map[y, 0].walkable = False
+            self.map[y, 0].transparent = False
+            self.map[y, 0].symbol = "#"
+            self.map[y, 0].name = "Wall"
+            self.map[y, self.width - 1].walkable = False
+            self.map[y, self.width - 1].transparent = False
+            self.map[y, self.width - 1].symbol = "#"
+            self.map[y, self.width - 1].name = "Wall"
+            for x in range(self.width):
+                self.map[0, x].walkable = False
+                self.map[0, x].transparent = False
+                self.map[0, x].symbol = "#"
+                self.map[0, x].name = "Wall"
+                self.map[self.height - 1, x].walkable = False
+                self.map[self.height - 1, x].transparent = False
+                self.map[self.height - 1, x].symbol = "#"
+                self.map[self.height - 1, x].name = "Wall"
 
     def generate(self, map_type):
+        ############################################################################
         if map_type == "plain":
 
-            self.map = [[Tile(x, y) for y in range(self.height)] for x in range(self.width)]
+            for y in range(world.height):
+                for x in range(world.width):
+                    self.map[y, x] = Tile(y, x)
 
             # Generate the FOV map
             self.fov_map = libtcod.map_new(self.width, self.height)  # init fov_map
 
+            # Generate walls enclosing the map
+            self.generate_borders()
+
             for y in range(self.height):
                 for x in range(self.width):
-                    if self.map[x][y].walkable is True:
+                    if self.map[y, x].walkable is True:
                         libtcod.map_set_properties(self.fov_map, x, y, True, True)
                     else:
                         libtcod.map_set_properties(self.fov_map, x, y, False, False)
+        ############################################################################
+        if map_type == "noise":
 
+            for y in range(world.height):
+                for x in range(world.width):
+                    self.map[y, x] = Tile(x, y)
+
+                    noise = random.randint(0,16)
+                    if noise > 0:
+                        self.map[y, x].walkable = True
+                        self.map[y, x].transparent = True
+                        self.map[y, x].symbol = "."
+                        self.map[y, x].name = "Ground"
+                    else:
+                        self.map[y, x].walkable = False
+                        self.map[y, x].transparent = False
+                        self.map[y, x].symbol = "#"
+                        self.map[y, x].name = "Wall"
+
+            # Generate the FOV map
+            self.fov_map = libtcod.map_new(self.width, self.height)  # init fov_map
+
+            # Generate walls enclosing the map
+            self.generate_borders()
+
+            for y in range(self.height):
+                for x in range(self.width):
+                    if self.map[y, x].walkable is True:
+                        libtcod.map_set_properties(self.fov_map, x, y, True, True)
+                    else:
+                        libtcod.map_set_properties(self.fov_map, x, y, False, False)
+        ############################################################################
         else:
             print("Invalid gen_type for method World.generate")
+
+
 
 
 class Renderer:
@@ -141,9 +210,6 @@ class Renderer:
     """
     def __init__(self):
         self.fov_recompute = None
-
-        # Display player.name in the top left
-        libtcod.console_print_ex(CON_GUI, 0, 0, libtcod.BKGND_NONE, libtcod.LEFT, player.name)
 
     def update_world(self):
         # Compute FOV if necessary
@@ -159,13 +225,13 @@ class Renderer:
                 visible = libtcod.map_is_in_fov(world.fov_map, x, y)  # True if Tile visible for player
 
                 if visible:
-                    world.map[x][y].explored = True  # set visible Tile as explored
+                    world.map[y, x].explored = True  # set visible Tile as explored
 
-                    libtcod.console_put_char_ex(CON_GAME, x, y, world.map[x][y].symbol, color_light_ground,
+                    libtcod.console_put_char_ex(CON_GAME, x, y, world.map[y, x].symbol, world.map[y, x].color,
                                              libtcod.black)
                 else:
-                    if world.map[x][y].explored:  # == True
-                        libtcod.console_put_char_ex(CON_GAME, x, y, world.map[x][y].symbol, color_dark_ground,
+                    if world.map[y, x].explored:  # == True
+                        libtcod.console_put_char_ex(CON_GAME, x, y, world.map[y, x].symbol, world.map[y, x].color_dark,
                                                  libtcod.black)
                     else:
                         libtcod.console_put_char_ex(CON_GAME, x, y, " ", libtcod.black, libtcod.black)
@@ -176,6 +242,12 @@ class Renderer:
 
 
 def update_ui():
+    # Clear the UI console before refresh
+    libtcod.console_clear(CON_GUI)
+
+    # Display player.name in the top left
+    libtcod.console_print_ex(CON_GUI, 0, 0, libtcod.BKGND_NONE, libtcod.LEFT, player.name)
+
     # Update the player.actor.hp
     libtcod.console_set_default_foreground(CON_GUI, libtcod.light_crimson)
     libtcod.console_print_ex(CON_GUI, len(player.name) + 1, 0,
@@ -188,55 +260,43 @@ def update_ui():
                              libtcod.BKGND_NONE, libtcod.LEFT,
                              str(player.actor.mana) + "/" + str(player.actor.mana_max))
 
-    # Update level number and name
     libtcod.console_set_default_foreground(CON_GUI, libtcod.white)
+    libtcod.console_print_ex(CON_GUI, SCREEN_WIDTH / 2, 0, libtcod.BKGND_NONE, libtcod.CENTER,
+                         get_names_under_mouse(mouse))
+
+    # Update level number and name
     libtcod.console_print_ex(CON_GUI, CAMERA_WIDTH - 1, 0, libtcod.BKGND_NONE, libtcod.RIGHT,
                              "Level " + str(world.number) + ": " + world.name)
 
 
-def check_for_input():
-    move_directions = {
-        "up"        :   (0, -1),
-        "up-right"  :   (1, -1),
-        "right"     :   (1, 0),
-        "down-right":   (1, 1),
-        "down"      :   (0, 1),
-        "down-left" :   (-1, 1),
-        "left"      :   (-1, 0),
-        "up-left"   :   (-1, -1)
-    }
 
-    move_keys = {
-        libtcod.KEY_KP8     :   "up",
-        libtcod.KEY_UP      :   "up",
+def check_for_input(key):
+    #key = libtcod.console_wait_for_keypress(True)   # wait for player keypress
 
-        libtcod.KEY_KP9     :   "up-right",
-
-        libtcod.KEY_KP6     :   "right",
-        libtcod.KEY_RIGHT   :   "right",
-
-        libtcod.KEY_KP3     :   "down-right",
-
-        libtcod.KEY_KP2     :   "down",
-        libtcod.KEY_DOWN    :   "down",
-
-        libtcod.KEY_KP1     :   "down-left",
-
-        libtcod.KEY_KP4     :   "left",
-        libtcod.KEY_LEFT    :   "left",
-
-        libtcod.KEY_KP7     :   "up-left"
-    }
-
-    key = libtcod.console_wait_for_keypress(True)   # wait for player keypress
-
-    if key.vk in move_keys:
-        dx, dy = move_directions[move_keys[key.vk]]
+    if key.vk in MOVE_KEYS:
+        dx, dy = MOVE_DIRECTIONS[MOVE_KEYS[key.vk]]
         player.actor.move(dx, dy)                   # move the player
         renderer.fov_recompute = True               # player moves -> recompute FOV
+        return "player acted"
 
     elif key.vk is libtcod.KEY_ESCAPE:
         return "exit"
+
+
+def get_names_under_mouse(mouse):
+
+    mx, my = (mouse.cx - 1, mouse.cy - 3)
+
+    if libtcod.map_is_in_fov(world.fov_map, mx, my):
+        tile_name = world.map[my, mx].name  # + ", ".join(names)    # join the names with comma seperation
+        entity_names = [entry.name for entry in world.entities
+                        if entry.x == mx and entry.y == my]
+        entity_names.append(tile_name)
+        entity_names = ", ".join(entity_names)
+
+        return entity_names
+    else:
+        return ""
 
 
 ########################################################################################################################
@@ -253,18 +313,26 @@ player = Entity("Dude McSnore", CAMERA_WIDTH / 2, CAMERA_HEIGHT / 2, "@",
 #########################################################
 
 world = World("Testrealm")    # Initialize the World named Slatsnrealm
-world.generate("plain")         # Generate the map using a map_type string
+world.generate("noise")         # Generate the map using a map_type string
 
 renderer = Renderer()           # Initialize the renderer
+renderer.fov_recompute = True   # Initialize FOV computation
 
 #########################################################
+
+mouse = libtcod.Mouse()
+key = libtcod.Key()
+libtcod.sys_set_fps(FPS_LIMIT)
+
 while not libtcod.console_is_window_closed():
+    libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS | libtcod.EVENT_MOUSE, key, mouse)
 
     renderer.update_world()  # re-render the world
     update_ui()  # re-render the ui
 
     ##############################################
     # blit off-screen consoles to the root console
+
     libtcod.console_blit(CON_GAME, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 1, 3)
     libtcod.console_blit(CON_GUI, 0, 0, SCREEN_WIDTH, 1, 0, 1, 1)
 
@@ -276,6 +344,6 @@ while not libtcod.console_is_window_closed():
         entity.clear()
 
     # Check for player input and act accordingly
-    input = check_for_input()
+    input = check_for_input(key)
     if input == "exit":
         break
