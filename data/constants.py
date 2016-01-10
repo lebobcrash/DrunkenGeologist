@@ -9,16 +9,23 @@ FONT2 = "fonts/Alloy_curses_12x12.png"
 FONT3 = "fonts/grimfortress_cube.png"
 
 # map screen size
-CAMERA_WIDTH = 92
-CAMERA_HEIGHT = 52
+CAMERA_WIDTH = 64
+CAMERA_HEIGHT = 32
 
 # overall screen size
 SCREEN_WIDTH = CAMERA_WIDTH + 2
 SCREEN_HEIGHT = CAMERA_HEIGHT + 4
 
+# map size for now
+MAP_WIDTH = 100
+MAP_HEIGHT = 100
+
+LOG_HEIGHT = 8
+
 # initialize game consoles
 CON_GAME = libtcod.console_new(CAMERA_WIDTH, CAMERA_HEIGHT)	        # con for displaying the map only
 CON_GUI = libtcod.console_new(CAMERA_WIDTH, 1)						# con for the one-liner GUI
+CON_LOG = libtcod.console_new(CAMERA_WIDTH, LOG_HEIGHT)
 
 #########################################################
 # FOV options
