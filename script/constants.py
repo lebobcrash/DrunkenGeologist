@@ -2,30 +2,36 @@
 import libtcodpy as libtcod
 
 FPS_LIMIT = 20
+RENDERER = libtcod.RENDERER_SDL
 
 # font options
 FONT1 = "fonts/qbicfeet_10x10.png"
 FONT2 = "fonts/Alloy_curses_12x12.png"
 FONT3 = "fonts/grimfortress_cube.png"
+FONT4 = "fonts/16x16_Kenran.png"
 
 # map screen size
 CAMERA_WIDTH = 64
-CAMERA_HEIGHT = 32
+CAMERA_HEIGHT = 42
+
+# log dimensions
+LOG_WIDTH = CAMERA_WIDTH
+LOG_HEIGHT = 8
 
 # overall screen size
 SCREEN_WIDTH = CAMERA_WIDTH + 2
-SCREEN_HEIGHT = CAMERA_HEIGHT + 4
+SCREEN_HEIGHT = CAMERA_HEIGHT + 4 + LOG_HEIGHT
 
 # map size for now
-MAP_WIDTH = 100
-MAP_HEIGHT = 100
+MAP_WIDTH = 200
+MAP_HEIGHT = 200
 
-LOG_HEIGHT = 8
+
 
 # initialize game consoles
 CON_GAME = libtcod.console_new(CAMERA_WIDTH, CAMERA_HEIGHT)	        # con for displaying the map only
 CON_GUI = libtcod.console_new(CAMERA_WIDTH, 1)						# con for the one-liner GUI
-CON_LOG = libtcod.console_new(CAMERA_WIDTH, LOG_HEIGHT)
+CON_LOG = libtcod.console_new(LOG_WIDTH, LOG_HEIGHT)
 
 #########################################################
 # FOV options
@@ -44,7 +50,7 @@ color_light_wall = libtcod.Color(180, 180, 180)
 color_dark_ground = libtcod.Color(35, 35, 35)
 color_light_ground = libtcod.Color(150, 150, 150)
 
-color_ui_frames = libtcod.Color(220,220,220)
+color_ui_frames = libtcod.Color(110,110,110)
 
 #########################################################
 # ASCII characters

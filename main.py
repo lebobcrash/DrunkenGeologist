@@ -1,6 +1,8 @@
-from data.constants import *
-import numpy as np
 import random
+import textwrap
+
+import numpy as np
+from script.constants import *
 
 
 #########################################################
@@ -9,10 +11,8 @@ import random
 
 
 class Game:
-    """
-    The fundamental game object initializing the font, console and drawing the ui borders.
-	"""
     def __init__(self):
+        self.log = []  # list of messages (text, libtcod.color)
         self.state = "playing"
 
         #######################################################################
@@ -20,55 +20,45 @@ class Game:
         #######################################################################
 
         # Set custom font
-        libtcod.console_set_custom_font(FONT2, libtcod.FONT_LAYOUT_ASCII_INROW)
+        libtcod.console_set_custom_font(FONT1, libtcod.FONT_LAYOUT_ASCII_INROW)
 
         # Initialize console
         libtcod.console_init_root(SCREEN_WIDTH, SCREEN_HEIGHT,  # window size
                                   "Drunken Geologist",  # window title
-                                  False  # fullscreen bool
-                                  )
+                                  False,  # fullscreen bool
+                                  RENDERER)
 
         # Draw UI frames
-        # for y in range(SCREEN_HEIGHT):
-        #     libtcod.console_put_char_ex(0, 0, y, ASCII_v_line, color_ui_frames, libtcod.black)
-        #     libtcod.console_put_char_ex(0, SCREEN_WIDTH - 1, y, ASCII_v_line, color_ui_frames, libtcod.black)
-        #
-        # for x in range(SCREEN_WIDTH):
-        #     libtcod.console_put_char_ex(0, x, 0, ASCII_h_line, color_ui_frames, libtcod.black)
-        #     libtcod.console_put_char_ex(0, x, SCREEN_HEIGHT - 1, ASCII_h_line, color_ui_frames, libtcod.black)
-        #     libtcod.console_put_char_ex(0, x, 2, ASCII_h_line, color_ui_frames, libtcod.black)
-        #
-        #
-        # libtcod.console_put_char_ex(0, 0, 0, ASCII_line_top_left, color_ui_frames, libtcod.black)
-        # libtcod.console_put_char_ex(0, 0, 2, ASCII_vT_left, color_ui_frames, libtcod.black)
-        # libtcod.console_put_char_ex(0, 0, SCREEN_HEIGHT - 1, ASCII_line_bot_left, color_ui_frames, libtcod.black)
-        # libtcod.console_put_char_ex(0, SCREEN_WIDTH - 1, 0, ASCII_line_top_right, color_ui_frames, libtcod.black)
-        # libtcod.console_put_char_ex(0, SCREEN_WIDTH - 1, 2, ASCII_vT_right, color_ui_frames, libtcod.black)
-        # libtcod.console_put_char_ex(0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, ASCII_line_bot_right, color_ui_frames,
-        #                             libtcod.black)
+        for y in range(SCREEN_HEIGHT):
+            libtcod.console_put_char_ex(0, 0, y, ASCII_v_line, color_ui_frames, libtcod.black)
+            libtcod.console_put_char_ex(0, SCREEN_WIDTH - 1, y, ASCII_v_line, color_ui_frames, libtcod.black)
+
+        for x in range(SCREEN_WIDTH):
+            libtcod.console_put_char_ex(0, x, 0, ASCII_h_line, color_ui_frames, libtcod.black)
+            libtcod.console_put_char_ex(0, x, SCREEN_HEIGHT - 1, ASCII_h_line, color_ui_frames, libtcod.black)
+            libtcod.console_put_char_ex(0, x, 2, ASCII_h_line, color_ui_frames, libtcod.black)
+
+        libtcod.console_put_char_ex(0, 0, 0, ASCII_line_top_left, color_ui_frames, libtcod.black)
+        libtcod.console_put_char_ex(0, 0, 2, ASCII_vT_left, color_ui_frames, libtcod.black)
+        libtcod.console_put_char_ex(0, 0, SCREEN_HEIGHT - 1, ASCII_line_bot_left, color_ui_frames, libtcod.black)
+        libtcod.console_put_char_ex(0, SCREEN_WIDTH - 1, 0, ASCII_line_top_right, color_ui_frames, libtcod.black)
+        libtcod.console_put_char_ex(0, SCREEN_WIDTH - 1, 2, ASCII_vT_right, color_ui_frames, libtcod.black)
+        libtcod.console_put_char_ex(0, SCREEN_WIDTH - 1, SCREEN_HEIGHT - 1, ASCII_line_bot_right, color_ui_frames,
+                                    libtcod.black)
 
 
 class Entity:
-    """
-    Basic map Entity
-
-    METHOD draw: draws Entity at position
-    METHOD clear: overwrites Entity at position with underlying Tile
-	"""
-    def __init__(self, name, x, y, symbol, color, actor=None, item=None):
+    def __init__(self, name, x, y, symbol, color, bcolor=libtcod.black, actor=None):
         self.name = name
         self.x = x
         self.y = y
         self.symbol = symbol
         self.color = color
+        self.bcolor = bcolor
 
         self.actor = actor
         if self.actor:
             self.actor.owner = self
-
-        self.item = item
-        if self.item:
-            self.item.owner = self
 
     # Draws Entity at x,y
     def draw(self):
@@ -91,16 +81,19 @@ class Actor:
 
     METHOD move: moves the Entity if possible.
     """
+
     def __init__(self, hp, mana):
         self.hp = hp
         self.hp_max = hp
         self.mana = mana
         self.mana_max = mana
         self.inventory = []
+        self.faction = None
 
     def move(self, dx, dy):
         # Move if Tile is walkable
-        if world.map[self.owner.y + dy, self.owner.x + dx].walkable is True:
+        tile = world.map[self.owner.y + dy, self.owner.x + dx]
+        if tile.walkable:
             self.owner.x += dx
             self.owner.y += dy
         else:
@@ -115,37 +108,18 @@ class Actor:
                     print "Inventory full."
 
 
-class Item:
-    def __init__(self, use_function=None):
-        self.use_function = use_function
-
-    def use(self):
-        if self.use_function is None:
-            print "This item cannot be used."
-        else:
-            if self.use_function() is not "cancelled":
-                player.actor.inventory.remove(self.owner)
-                self.use_function()
-            else:
-                pass
-
-
 class Tile:
-    """
-    The general Tile class, carrying the x,y coordinates of the respective tile, it's symbol, name,
-    in-fov- and out-of-fov-color, explored bool, walkable bool and transparent bool.
-	"""
     def __init__(self, y, x):
         self.x = x
         self.y = y
-
-        self.rel_x = None
-        self.rel_y = None
+        self.container = []
 
         self.symbol = "."
         self.name = None
         self.color = color_light_ground
         self.color_dark = color_dark_ground
+        self.bcolor = color_light_ground
+        self.bcolor_dark = color_dark_ground
 
         self.explored = False  # all tiles start unexplored
         self.walkable = True
@@ -153,15 +127,6 @@ class Tile:
 
 
 class World:
-    """
-    Initializes the world, creates a list of all Entities present and most importantly
-    the map.
-
-    METHOD generate_borders: creates encapsulating map borders (for test maps) and is
-        automatically used in "plain" and "noise".
-    METHOD generate: generates map[y, x] (np.ndarray) depending on map_type str
-        map_type: "plain", "noise"
-	"""
     def __init__(self, name):
         self.width = MAP_WIDTH
         self.height = MAP_HEIGHT
@@ -223,12 +188,17 @@ class World:
                 for x in range(world.width):
                     self.map[y, x] = Tile(x, y)
 
-                    noise = random.randint(0, 30)
+                    noise_range = 10
+                    noise = random.randint(0, noise_range)
                     if noise > 0:
                         self.map[y, x].walkable = True
                         self.map[y, x].transparent = True
                         self.map[y, x].symbol = "."
                         self.map[y, x].name = "Ground"
+
+                        # if random.randint(0, 170) is 170:
+                        #    monster = Entity("Evil Dude", x, y, "d", libtcod.dark_magenta, libtcod.black, actor=Actor(5, 0))
+                        #    self.entities.append(monster)
                     else:
                         self.map[y, x].walkable = False
                         self.map[y, x].transparent = False
@@ -258,6 +228,7 @@ class Renderer:
 
     METHOD update_world: computes fov if necessary and draws all map Tiles and Entities
     """
+
     def __init__(self):
         self.fov_recompute = None
 
@@ -282,11 +253,13 @@ class Renderer:
                 if visible:
                     world.map[map_y, map_x].explored = True  # set visible Tile as explored
 
-                    libtcod.console_put_char_ex(CON_GAME, x, y, world.map[map_y, map_x].symbol, world.map[map_y, map_x].color,
+                    libtcod.console_put_char_ex(CON_GAME, x, y, world.map[map_y, map_x].symbol,
+                                                world.map[map_y, map_x].color,
                                                 libtcod.black)
                 else:
                     if world.map[map_y, map_x].explored:  # == True
-                        libtcod.console_put_char_ex(CON_GAME, x, y, world.map[map_y, map_x].symbol, world.map[map_y, map_x].color_dark,
+                        libtcod.console_put_char_ex(CON_GAME, x, y, world.map[map_y, map_x].symbol,
+                                                    world.map[map_y, map_x].color_dark,
                                                     libtcod.black)
                     else:
                         libtcod.console_put_char_ex(CON_GAME, x, y, " ", libtcod.black, libtcod.black)
@@ -295,7 +268,9 @@ class Renderer:
         for entry in world.entities:
             if entry != player:
                 entry.draw()
-        player.draw()   # draw player last
+        player.draw()  # draw player last
+
+        libtcod.console_blit(CON_GAME, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 1, 3)
 
 
 def update_ui():
@@ -330,6 +305,21 @@ def update_ui():
     libtcod.console_print_ex(CON_GUI, CAMERA_WIDTH - 1, 0, libtcod.BKGND_NONE, libtcod.RIGHT,
                              "Level " + str(world.number) + ": " + world.name)
 
+    libtcod.console_blit(CON_GUI, 0, 0, SCREEN_WIDTH, 1, 0, 1, 1)
+
+
+def update_log():
+    libtcod.console_clear(CON_LOG)
+
+    y = 1
+    for (line, color) in reversed(game.log):
+        libtcod.console_set_default_foreground(CON_LOG, color)
+        libtcod.console_print_ex(CON_LOG, 0, y, libtcod.BKGND_NONE, libtcod.LEFT, line)
+        y += 1
+
+    libtcod.console_blit(CON_LOG, 0, 0, SCREEN_WIDTH, LOG_HEIGHT, 0, 1, SCREEN_HEIGHT - 1 - LOG_HEIGHT, 0.6, 0.3)
+
+
 #########################################################################################################
 # Functions
 #########################################################################################################
@@ -345,6 +335,9 @@ def check_input(key):
     if key.vk is libtcod.KEY_ESCAPE:
         return "exit"
 
+    if key.vk is libtcod.KEY_F11:
+        libtcod.console_set_fullscreen(not libtcod.console_is_fullscreen())
+
     if game.state is "playing":
 
         if key.vk in MOVE_KEYS:
@@ -355,14 +348,7 @@ def check_input(key):
 
         else:
             key_char = chr(key.c)
-
-            if key_char == "i":
-                chosen_item = inventory_menu()
-                if chosen_item is not None:
-                    chosen_item.use()
-                # game.state = "in menu"
-
-            return "player did not act"
+            pass
 
 
 def get_names_under_mouse(mouse):
@@ -385,60 +371,6 @@ def get_names_under_mouse(mouse):
         return entity_names
     else:
         return ""
-
-
-def menu(title, options):
-    """
-
-    :param title: title str
-    :param options: list of menu options str
-    :return:
-    """
-    # Create off-screen console for the menu
-    menu_window = libtcod.console_new(CAMERA_WIDTH, CAMERA_HEIGHT)
-    libtcod.console_set_default_background(menu_window, libtcod.black)
-
-    # Print the title
-    libtcod.console_print_ex(menu_window, 2, 2, libtcod.BKGND_NONE, libtcod.LEFT, "- " + title + " -")
-
-    # Loop-print all options
-    h = 5
-    numerator = ord("a")
-    for entry in options:
-        text = "[" + chr(numerator) + "] " + entry
-        libtcod.console_print_ex(menu_window, 4, h, libtcod.BKGND_NONE, libtcod.LEFT, text)
-        h += 1
-        numerator += 1
-
-    # Blit to the root console
-    libtcod.console_blit(menu_window, 0, 0, CAMERA_WIDTH, CAMERA_HEIGHT, 0, 1, 3)
-
-    # Present root console to the player and wait for key-press
-    libtcod.console_flush()
-    key = libtcod.console_wait_for_keypress(True)
-
-    # Convert ASCII code to an index, if it corresponds to an option, return it
-    index = key.c - ord("a")
-    if 0 <= index < len(options):
-        return index
-    else:
-        return None
-
-
-def inventory_menu():
-
-    if len(player.actor.inventory) == 0:
-        options = ["Inventory is empty."]
-    else:
-        options = [entry.name for entry in player.actor.inventory]
-
-    index = menu("Inventory", options)
-
-    # if an item was chosen, return it:
-    if index is None or len(player.actor.inventory) == 0:
-        return None
-    else:
-        return player.actor.inventory[index].item
 
 
 def move_camera(target_x, target_y):
@@ -467,31 +399,21 @@ def to_camera_coordinates(x, y):
     (x, y) = (x - camera_x, y - camera_y)
 
     if x < 0 or y < 0 or x >= CAMERA_WIDTH or y >= CAMERA_HEIGHT:
-        return None, None # if it's outside the view return nothing
+        return None, None  # if it's outside the view return nothing
 
     return x, y
 
 
+def log_message(message, color=libtcod.lightest_gray):
+    # Wrap message across multiple lines if too long
+    message_lines = textwrap.wrap(message, CAMERA_WIDTH)
 
+    for line in message_lines:
+        # if the buffer is full remove the first line to make froom for the new one
+        # if len(game.log) == LOG_HEIGHT - 1:
+        #    del game.log[0]
 
-
-
-##################################################################################################
-# Spell functions
-##################################################################################################
-
-
-def heal(target, amount):
-    if target.actor.hp == target.actor.hp_max:
-        print "Target already at full health."
-        return "cancelled"
-    else:
-        if target.actor.hp + amount > target.actor.hp_max:
-            target.actor.hp = target.actor.hp_max
-        else:
-            target.actor.hp += amount
-
-
+        game.log.append((line, color))
 
 
 ########################################################################################################################
@@ -504,11 +426,6 @@ game = Game()  # Initialize the Game
 # Player creation
 player = Entity("Dude McSnore", MAP_WIDTH / 2, MAP_HEIGHT / 2, "@",
                 libtcod.red, actor=Actor(25, 12))
-
-test_item = Entity("Pale Red Potion", None, None, "!", libtcod.white,
-                   item=Item())
-player.actor.inventory.append(test_item)
-player.actor.hp -= 11
 #########################################################
 
 world = World("Testrealm")  # Initialize the World named Slatsnrealm
@@ -523,20 +440,16 @@ mouse = libtcod.Mouse()
 key = libtcod.Key()
 libtcod.sys_set_fps(FPS_LIMIT)
 
+log_message("This is one hell of a log message, please keep calm.")
+
 while not libtcod.console_is_window_closed():
     libtcod.sys_check_for_event(libtcod.EVENT_KEY_PRESS | libtcod.EVENT_MOUSE, key, mouse)
 
     renderer.update_world()  # re-render the world
     update_ui()  # re-render the ui
-
-    ##############################################
-    # blit off-screen consoles to the root console
-
-    libtcod.console_blit(CON_GAME, 0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, 0, 1, 3)
-    libtcod.console_blit(CON_GUI, 0, 0, SCREEN_WIDTH, 1, 0, 1, 1)
+    update_log()  # re-render the log
 
     libtcod.console_flush()
-    ##############################################
 
     # Clear all Entities on the map
     for entity in world.entities:
